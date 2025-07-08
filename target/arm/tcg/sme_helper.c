@@ -1073,6 +1073,14 @@ static void do_fmopa_s(void *vza, void *vzn, void *vzm, uint16_t *pn,
                             uint32_t *a = vza_row + H1_4(col);
                             uint32_t *m = vzm + H1_4(col);
                             *a = float32_muladd(n, *m, *a, negf, fpst);
+
+                            // uint32_t bits = *a;          /* raw 0x3F800000 */
+                            // uint32_t bits2 = *m;
+                            // float    f;
+                            // float    f2;
+                            // memcpy(&f, &bits, sizeof(f)); /* strict-alias-safe “cast” */
+                            // memcpy(&f2, &bits2, sizeof(f2)); /* strict-alias-safe “cast” */
+                            // printf("row=%ld col=%ld a=%f m=%f\n", row, col, f, f2);
                         }
                         col += 4;
                         pb >>= 4;
@@ -2665,35 +2673,62 @@ DEF_IMOPH(umopa, d)
 DEF_IMOPH(sumopa, d)
 DEF_IMOPH(usmopa, d)
 
-void HELPER(sme_fscale_s)(void *vza, void *vzn, void *vpg, void *fpst_in, uint32_t desc)
+void HELPER(sme_fscale_s)(void *vza, void *vzn, void *vpg, float_status *fpst_in, uint32_t desc)
 {
-    intptr_t i, j, oprsz = simd_oprsz(desc);
-    bool vertical = simd_data(desc);
-    uint8_t *pg = vpg;
-    float32 *za = vza;
-    float32 *zn = vzn;
-    float_status fpst = *(float_status *)fpst_in;
+    intptr_t row, col, oprsz = simd_maxsz(desc);
+    bool vertical = simd_data(desc);  /* HV flag: 0=horizontal, 1=vertical */
+    uint16_t *pg = vpg;
+    float_status fpst;
 
-    for (i = 0; i < oprsz; i += 16) {
-        uint16_t mask = *(uint16_t *)(pg + H1_2(i >> 3));
-        
-        for (j = 0; j < 16; j += 4) {
-            if (mask & (1 << (j / 4))) {
-                float32 *tile_elem;
-                float32 scale_factor;
-                
-                if (vertical) {
-                    /* Vertical: scale column by vector element */
-                    tile_elem = za + tile_vslice_index(i + j) / sizeof(float32);
-                    scale_factor = zn[H1_4(i + j)];
-                } else {
-                    /* Horizontal: scale row by vector element */
-                    tile_elem = za + (i + j) / sizeof(float32);
-                    scale_factor = zn[H1_4(i + j)];
-                }
-                
-                *tile_elem = float32_mul(*tile_elem, scale_factor, &fpst);
+    /*
+     * Make a copy of float_status because this operation does not
+     * update the cumulative fp exception status. It also produces
+     * default nans.
+     */
+    fpst = *fpst_in;
+    set_default_nan_mode(true, &fpst);
+
+    /* Iterate through the tile matrix: row x col */
+    for (row = 0; row < oprsz; ) {
+        uint16_t prow = pg[H2(row >> 4)];
+        do {
+            void *vza_row = vza + tile_vslice_offset(row);
+            
+            for (col = 0; col < oprsz; ) {
+                uint16_t pcol = pg[H2(col >> 4)];
+                do {
+                    /* Check predicate based on HV flag:
+                     * HV=0 (horizontal): check predicate for column
+                     * HV=1 (vertical): check predicate for row */
+                    bool active = vertical ? (prow & 1) : (pcol & 1);
+                    
+                    if (active) {
+                        uint32_t *tile_elem = vza_row + H1_4(col);
+                        /* Select scale factor from vector:
+                         * HV=0 (horizontal): use row index to select from vector
+                         * HV=1 (vertical): use col index to select from vector */
+                        uint32_t *scale_factor = vzn + H1_4(vertical ? col : row);
+
+                        // printf("tile_elem: %d\n", *tile_elem);
+                        // printf("scale_factor: %d\n", scale_factor);
+
+                        // uint32_t bits = *tile_elem;        
+                        // uint32_t bits2 = *scale_factor;
+                        // float    f;
+                        // float    f2;
+                        // memcpy(&f, &bits, sizeof(f)); /* strict-alias-safe “cast” */
+                        // memcpy(&f2, &bits2, sizeof(f2)); /* strict-alias-safe “cast” */
+                        // printf("row=%ld col=%ld tile_elem=%f scale_factor=%f\n", row, col, f, f2);
+                        
+                        *tile_elem = float32_mul(*tile_elem, *scale_factor, &fpst);
+                    }
+                    
+                    col += 4;
+                    pcol >>= 4;
+                } while (col & 15);
             }
-        }
+            row += 4;
+            prow >>= 4;
+        } while (row & 15);
     }
 }
