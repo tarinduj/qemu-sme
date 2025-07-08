@@ -1254,6 +1254,8 @@ void HELPER(sme_fscale_s)(void *vza, void *vzn, void *vpg, float_status *fpst_in
     uint16_t *pg = vpg;
     float_status fpst;
 
+    printf("vertical: %d\n", vertical);
+
     /*
      * Make a copy of float_status because this operation does not
      * update the cumulative fp exception status. It also produces
@@ -1279,9 +1281,9 @@ void HELPER(sme_fscale_s)(void *vza, void *vzn, void *vpg, float_status *fpst_in
                     if (active) {
                         uint32_t *tile_elem = vza_row + H1_4(col);
                         /* Select scale factor from vector:
-                         * HV=0 (horizontal): use row index to select from vector
-                         * HV=1 (vertical): use col index to select from vector */
-                        uint32_t *scale_factor = vzn + H1_4(vertical ? col : row);
+                         * HV=0 (horizontal): use col index to select from vector
+                         * HV=1 (vertical): use row index to select from vector */
+                        uint32_t *scale_factor = vzn + H1_4(vertical ? row : col);
 
                         // printf("tile_elem: %d\n", *tile_elem);
                         // printf("scale_factor: %d\n", scale_factor);
