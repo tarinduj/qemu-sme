@@ -991,3 +991,11 @@ LUTI4_s_2b      1100 0000 1001 101 idx:2  1 00 00 zn:5 zd:5     &lut
 LUTI4_s_2h      1100 0000 1001 101 idx:2  1 01 00 zn:5 zd:5     &lut
 
 LUTI4_s_4h      1100 0000 1001 101 idx:1 10 01 00 zn:5 zd:5     &lut
+
+### SME Scale Tile
+
+&fscale        zad zn pg v:bool                                     # argument pack
+
+@fscale_32     ....... . . ....... v:1 . . pg:3 zn:5 . zad:2 ..     &fscale
+
+FSCALE_s       1000000 0 0 0000000 . 1 0 ... ..... 0 .. 00          @fscale_32

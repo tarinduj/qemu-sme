@@ -2660,3 +2660,40 @@ void HELPER(sme2_sel_d)(void *vd, void *vn, void *vm,
         }
     }
 }
+DEF_IMOPH(smopa, d)
+DEF_IMOPH(umopa, d)
+DEF_IMOPH(sumopa, d)
+DEF_IMOPH(usmopa, d)
+
+void HELPER(sme_fscale_s)(void *vza, void *vzn, void *vpg, void *fpst_in, uint32_t desc)
+{
+    intptr_t i, j, oprsz = simd_oprsz(desc);
+    bool vertical = simd_data(desc);
+    uint8_t *pg = vpg;
+    float32 *za = vza;
+    float32 *zn = vzn;
+    float_status fpst = *(float_status *)fpst_in;
+
+    for (i = 0; i < oprsz; i += 16) {
+        uint16_t mask = *(uint16_t *)(pg + H1_2(i >> 3));
+        
+        for (j = 0; j < 16; j += 4) {
+            if (mask & (1 << (j / 4))) {
+                float32 *tile_elem;
+                float32 scale_factor;
+                
+                if (vertical) {
+                    /* Vertical: scale column by vector element */
+                    tile_elem = za + tile_vslice_index(i + j) / sizeof(float32);
+                    scale_factor = zn[H1_4(i + j)];
+                } else {
+                    /* Horizontal: scale row by vector element */
+                    tile_elem = za + (i + j) / sizeof(float32);
+                    scale_factor = zn[H1_4(i + j)];
+                }
+                
+                *tile_elem = float32_mul(*tile_elem, scale_factor, &fpst);
+            }
+        }
+    }
+}
