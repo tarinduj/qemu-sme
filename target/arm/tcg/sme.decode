@@ -86,3 +86,11 @@ SMOPA_d         1010000 0 11 0 ..... ... ... ..... . 0 ...      @op_64
 SUMOPA_d        1010000 0 11 1 ..... ... ... ..... . 0 ...      @op_64
 USMOPA_d        1010000 1 11 0 ..... ... ... ..... . 0 ...      @op_64
 UMOPA_d         1010000 1 11 1 ..... ... ... ..... . 0 ...      @op_64
+
+### SME Scale Tile
+
+&fscale        zad zn pg v:bool                                     # argument pack
+
+@fscale_32     ....... . . ....... v:1 . . pg:3 zn:5 . zad:2 ..     &fscale
+
+FSCALE_s       1000000 0 0 0000000 . 1 0 ... ..... 0 .. 00          @fscale_32

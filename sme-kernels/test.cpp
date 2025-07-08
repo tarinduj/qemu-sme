@@ -19,7 +19,7 @@ float fmopa(float*& input, float*& output) {
 
         "dup z1.s, #2                                             \n"
         // "fscale za0h.s, p0/m, z1.s                                \n"
-        // ".inst 0b10000000000000000100000000100000                 \n"
+        ".inst 0b10000000000000000100000000100000                 \n"
 
         // Save ZA0 to output
         // Initialize registers

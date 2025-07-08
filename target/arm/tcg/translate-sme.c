@@ -373,3 +373,26 @@ TRANS_FEAT(SMOPA_d, aa64_sme_i16i64, do_outprod, a, MO_64, gen_helper_sme_smopa_
 TRANS_FEAT(UMOPA_d, aa64_sme_i16i64, do_outprod, a, MO_64, gen_helper_sme_umopa_d)
 TRANS_FEAT(SUMOPA_d, aa64_sme_i16i64, do_outprod, a, MO_64, gen_helper_sme_sumopa_d)
 TRANS_FEAT(USMOPA_d, aa64_sme_i16i64, do_outprod, a, MO_64, gen_helper_sme_usmopa_d)
+
+static bool do_fscale_fpst(DisasContext *s, arg_fscale *a, MemOp esz,
+                           ARMFPStatusFlavour e_fpst,
+                           gen_helper_gvec_3_ptr *fn)
+{
+    int svl = streaming_vec_reg_size(s);
+    uint32_t desc = simd_desc(svl, svl, a->v);
+    TCGv_ptr za, zn, pg, fpst;
+
+    if (!sme_smza_enabled_check(s)) {
+        return true;
+    }
+
+    za = get_tile(s, esz, a->zad);
+    zn = vec_full_reg_ptr(s, a->zn);
+    pg = pred_full_reg_ptr(s, a->pg);
+    fpst = fpstatus_ptr(e_fpst);
+
+    fn(za, zn, pg, fpst, tcg_constant_i32(desc));
+    return true;
+}
+
+TRANS_FEAT(FSCALE_s, aa64_sme, do_fscale_fpst, a, MO_32, FPST_A64, gen_helper_sme_fscale_s)
