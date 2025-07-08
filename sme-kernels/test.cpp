@@ -15,11 +15,14 @@ float fmopa(float*& input, float*& output) {
         "ptrue	p0.s                                              \n" // Predicate vector
 
         "ld1w z0.s, p0/z, [x1, x15, lsl #2]                       \n" // Store input into z0
+        
         "fmopa	za0.s, p0/m, p0/m, z0.s, z0.s                     \n" // fmopa
 
-        "dup z1.s, #2                                             \n"
+        "mov w0, #0x40000000                                      \n" // 2.0
+        "dup z1.s, w0                                             \n"
         // "fscale za0h.s, p0/m, z1.s                                \n"
-        ".inst 0b10000000000000000100000000100000                 \n"
+        ".inst 0b10000000000000000100000000100000                 \n" //horizontal
+        // ".inst 0b10000000000000001100000000100000                 \n" // vertical
 
         // Save ZA0 to output
         // Initialize registers
