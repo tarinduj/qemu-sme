@@ -5,12 +5,18 @@
 #include <iostream>
 
 float fmopa(float*& input, float*& output) {
+    float* scale_arr = new float[8];
+    for (int i = 0; i < 8; ++i) {
+        scale_arr[i] = float(i+1);
+    }
+
     __asm__ __volatile__(
         "smstart                                                  \n" // Start SME
         
         "mov x15, #0                                              \n" // Zero register
         "mov x1, %[input_arr]                                     \n" // input_arr pointer
         "mov x2, %[output_arr]                                    \n" // output_arr pointer
+        "mov x3, %[scale_arr]                                     \n" // scale_arr pointer
 
         "ptrue	p0.s                                              \n" // Predicate vector
 
@@ -18,12 +24,17 @@ float fmopa(float*& input, float*& output) {
         
         "fmopa	za0.s, p0/m, p0/m, z0.s, z0.s                     \n" // fmopa
 
-        "mov w0, #0x40000000                                      \n" // 2.0
-        "dup z1.s, w0                                             \n"
+        // scale array
+        // "mov w0, #0x40000000                                      \n" // 2.0
+        // "dup z1.s, w0                                             \n"
+        "ld1w z1.s, p0/z, [x3, x15, lsl #2]                       \n" // Store scale_arr into z1
         // "fscale za0h.s, p0/m, z1.s                                \n"
-        ".inst 0b10000000000000000100000000100000                 \n" //horizontal
-        // ".inst 0b10000000000000001100000000100000                 \n" // vertical
-
+        "mov x0, #6                                               \n"
+        "whilelo p0.s, xzr, x0                                    \n"
+        // ".inst 0b10000000000000000100000000100000                 \n" //horizontal
+        ".inst 0b10000000000000001100000000100000                 \n" // vertical
+        "ptrue p0.s                                               \n"
+        
         // Save ZA0 to output
         // Initialize registers
         "mov w15, #0                                              \n" // Loop counter i = 0
@@ -50,7 +61,8 @@ float fmopa(float*& input, float*& output) {
         "smstop                                                   \n" // Stop SME
     :
     :   [input_arr] "r" (input),
-        [output_arr] "r" (output)
+        [output_arr] "r" (output),
+        [scale_arr] "r" (scale_arr)
     : 
     );
 
