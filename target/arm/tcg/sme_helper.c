@@ -2680,7 +2680,7 @@ void HELPER(sme_fscale_s)(void *vza, void *vzn, void *vpg, float_status *fpst_in
     uint16_t *pg = vpg;
     float_status fpst;
 
-    printf("vertical: %d\n", vertical);
+    // printf("vertical: %d\n", vertical);
 
     /*
      * Make a copy of float_status because this operation does not
@@ -2723,6 +2723,48 @@ void HELPER(sme_fscale_s)(void *vza, void *vzn, void *vpg, float_status *fpst_in
                         // printf("row=%ld col=%ld tile_elem=%f scale_factor=%f\n", row, col, f, f2);
                         
                         *tile_elem = float32_mul(*tile_elem, *scale_factor, &fpst);
+                    }
+                    
+                    col += 4;
+                    pcol >>= 4;
+                } while (col & 15);
+            }
+            row += 4;
+            prow >>= 4;
+        } while (row & 15);
+    }
+}
+
+void HELPER(sme_sscale_s)(void *vza, void *vzn, void *vpg, uint32_t desc)
+{
+    intptr_t row, col, oprsz = simd_maxsz(desc);
+    bool vertical = simd_data(desc);  /* HV flag: 0=horizontal, 1=vertical */
+    uint16_t *pg = vpg;
+
+    printf("vertical: %d\n", vertical);
+
+    /* Iterate through the tile matrix: row x col */
+    for (row = 0; row < oprsz; ) {
+        uint16_t prow = pg[H2(row >> 4)];
+        do {
+            void *vza_row = vza + tile_vslice_offset(row);
+            
+            for (col = 0; col < oprsz; ) {
+                uint16_t pcol = pg[H2(col >> 4)];
+                do {
+                    /* Check predicate based on HV flag:
+                     * HV=0 (horizontal): check predicate for column
+                     * HV=1 (vertical): check predicate for row */
+                    bool active = vertical ? (prow & 1) : (pcol & 1);
+                    
+                    if (active) {
+                        uint32_t *tile_elem = vza_row + H1_4(col);
+                        /* Select scale factor from vector:
+                         * HV=0 (horizontal): use col index to select from vector
+                         * HV=1 (vertical): use row index to select from vector */
+                        uint32_t *scale_factor = vzn + H1_4(vertical ? row : col);
+
+                        *tile_elem = *tile_elem * *scale_factor;
                     }
                     
                     col += 4;

@@ -4,10 +4,10 @@
 #include <math.h>
 #include <iostream>
 
-float fmopa(float*& input, float*& output) {
-    float* scale_arr = new float[8];
+int smopa(int*& input, int*& output) {
+    int* scale_arr = new int[8];
     for (int i = 0; i < 8; ++i) {
-        scale_arr[i] = float(i+1);
+        scale_arr[i] = i+1;
     }
 
     __asm__ __volatile__(
@@ -22,18 +22,18 @@ float fmopa(float*& input, float*& output) {
 
         "ld1w z0.s, p0/z, [x1, x15, lsl #2]                       \n" // Store input into z0
         
-        "fmopa	za0.s, p0/m, p0/m, z0.s, z0.s                     \n" // fmopa
+        //  dup      z0.s, #1.0   // z0 = 1.0f replicated
+        // zero     ZA0.S        // clear the whole tile         :contentReference[oaicite:0]{index=0}
+        "addha za0.s, p0/m, p0/m, z0.s                            \n" 
 
         // scale array
-        // "mov w0, #0x40000000                                      \n" // 2.0
-        // "dup z1.s, w0                                             \n"
         "ld1w z1.s, p0/z, [x3, x15, lsl #2]                       \n" // Store scale_arr into z1
         "mov x0, #6                                               \n"
         "whilelo p0.s, xzr, x0                                    \n"
 
-        // "fscale za0h.s, p0/m, z1.s                                \n"
-        // ".inst 0b10000000000000000100000000100000                 \n" //horizontal
-        ".inst 0b10000000000000001100000000100000                 \n" // vertical
+        // "sscale za0h.s, p0/m, z1.s                                \n"
+        // ".inst 0b10000000000110000000000000100000                 \n" //horizontal
+        ".inst 0b10000000000110001000000000100000                 \n" //vertical
         "ptrue p0.s                                               \n"
         
         // Save ZA0 to output
@@ -67,18 +67,18 @@ float fmopa(float*& input, float*& output) {
     : 
     );
 
-    float res = input[0] * input[0];
+    int res = input[0] * input[0];
     return res;
 }
 
 int main() {
     // SME 
-    float* input = new float[8];
+    int* input = new int[8];
     for (int i = 0; i < 8; ++i) {
         input[i] = 1;
     }
 
-    float* output = new float[8*8];
+    int* output = new int[8*8];
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
             output[i * 8 + j] = 5;
@@ -98,7 +98,7 @@ int main() {
         std::cout << std::endl;
     } std::cout << std::endl;
 
-    float x = fmopa(input, output);
+    int x = smopa(input, output);
 
     std::cout << "output after: \n";
     for (int i = 0; i < 8; ++i) {
