@@ -396,3 +396,24 @@ static bool do_fscale_fpst(DisasContext *s, arg_fscale *a, MemOp esz,
 }
 
 TRANS_FEAT(FSCALE_s, aa64_sme, do_fscale_fpst, a, MO_32, FPST_A64, gen_helper_sme_fscale_s)
+
+static bool do_sscale(DisasContext *s, arg_sscale *a, MemOp esz,
+    gen_helper_gvec_2_ptr *fn)
+{
+int svl = streaming_vec_reg_size(s);
+uint32_t desc = simd_desc(svl, svl, a->v);
+TCGv_ptr za, zn, pg;
+
+if (!sme_smza_enabled_check(s)) {
+return true;
+}
+
+za = get_tile(s, esz, a->zad);
+zn = vec_full_reg_ptr(s, a->zn);
+pg = pred_full_reg_ptr(s, a->pg);
+
+fn(za, zn, pg, tcg_constant_i32(desc));
+return true;
+}
+
+TRANS_FEAT(SSCALE_s, aa64_sme, do_sscale, a, MO_32, gen_helper_sme_sscale_s)

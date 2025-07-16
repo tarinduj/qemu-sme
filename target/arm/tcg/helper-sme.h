@@ -146,3 +146,5 @@ DEF_HELPER_FLAGS_6(sme_usmopa_d, TCG_CALL_NO_RWG,
                    void, ptr, ptr, ptr, ptr, ptr, i32)
 DEF_HELPER_FLAGS_5(sme_fscale_s, TCG_CALL_NO_RWG, 
                    void, ptr, ptr, ptr, fpst, i32)
+DEF_HELPER_FLAGS_4(sme_sscale_s, TCG_CALL_NO_RWG, 
+                   void, ptr, ptr, ptr, i32)
