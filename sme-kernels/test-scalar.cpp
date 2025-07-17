@@ -32,8 +32,8 @@ int smopa(int*& input, int*& output) {
         "whilelo p0.s, xzr, x0                                    \n"
 
         // "sscale za0h.s, p0/m, z1.s                                \n"
-        // ".inst 0b10000000000110000000000000100000                 \n" //horizontal
-        ".inst 0b10000000000110001000000000100000                 \n" //vertical
+        ".inst 0b10000000000110000000000000100000                 \n" //horizontal
+        // ".inst 0b10000000000110001000000000100000                 \n" //vertical
         "ptrue p0.s                                               \n"
         
         // Save ZA0 to output
